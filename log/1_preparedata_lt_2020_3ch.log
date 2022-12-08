@@ -1,0 +1,200 @@
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  R:\B2\01 - Households\10 - Labour supply model\02 - Working area\02 - Training\EUROLAB 1.0\do\../log//1_preparedata_lt_2020_3ch.log
+  log type:  text
+ opened on:   5 Dec 2022, 18:58:04
+
+. *******************************************************************
+. ***************** INPUT DATA MERGED WITH OUTPUT DATA **************
+. *******************************************************************
+. di in r "1_preparedata started running: $S_TIME  $S_DATE"
+1_preparedata started running: 18:58:04   5 Dec 2022
+
+. if $INPUT_DATA == 1{
+.         quiet insheet using "${path_EMoutput}/${country}_${pyear}_std.txt", tab names clear double
+. 
+.         sum idhh
+.         tempfile udb
+.         save `udb'
+.         quiet insheet using "${path_EMinput}/original/${country}_${year}_${fil}.txt", clear
+.         sum idhh
+.         noisily cap unab allvars: _all
+.         global allvars "`allvars'" 
+.         merge 1:1 idper using `udb'
+.         drop _merge
+. }
+
+. 
+. *********************************************************************************
+. ***************** SILC DATA MERGED WITH INPUT DATA AND OUTPUT DATA **************
+. *********************************************************************************
+. if $INPUT_DATA == 0{
+. 
+.         local name = "2021-11" 
+.                                 
+.         use "${path_SILC_data}\\${country}\\${year}\\${country}-SILC-${year}-version_`name'.dta",clear
+. 
+.                 if "${country}" == "at" {
+. 
+.                                 gen double idperson_o = idperson
+.                                 local var_merge  "idperson_o"
+. 
+.                         }
+.                         else if "${country}" == "cz" {
+.                             
+.                                 format idperson %12.0f
+.                                 rename idperson idorigperson
+.                                 local var_merge "idorigperson"
+.                                 
+.                         }
+.                         else if "${country}" == "lt" {
+.                             
+.                                 *drop idorigperson
+.                                 gen idorigperson = idperson 
+.                                 local var_merge "idorigperson"
+.                                 
+.                         }
+.                         else if "${country}" == "sk" {
+.                             
+.                                 gen double r_rb030 = idperson
+.                                 drop rb030
+.                                 noi merge 1:1 r_rb030 using "${path_EMinput}/C19_R_HIDMAP_JRC_SK"
+.                                 replace idperson = rb030
+.                                 format idperson %12.0f
+.                                 rename r_rb030 idorigperson 
+.                                 local var_merge "idperson"
+.                                 
+.                         }
+.                         else if "${country}" == "it" {
+.                                 
+.                                 di in r "here i am"
+.                             local name = "2020-11"
+.                 use "${path_SILC_data}\\${country}\\${year}\\${country}-SILC-${year}-version_`name'.dta",clear
+. 
+.                                 local var_merge "idperson"
+.                                 
+.                         }
+.                         else {
+. 
+.                                 rename idperson idorigperson
+.                                 local var_merge "idorigperson"
+.                                 
+.                         }
+.                         
+.                         
+.                         
+.         local var_silc "rb031 rb230 pl060 pl100 pl073 py200g pl075 pl074 pl076 pl080 pl040 pl020 pl085 pl087 pl086 pl090 pl089 pl120 pb210 pb220* pl031 rb210"
+.                         local var_adhoc "pt060* pt070* pt090* pt100*"
+.                         capture keep idhh idperson `var_merge' `var_silc' `var_adhoc'
+.         tempfile udb
+.         *sort idhh idperson
+.         save `udb'
+file C:\Users\serruha\AppData\Local\Temp\ST_2af8_000001.tmp saved as .dta format
+.         
+.         quiet insheet using "${path_EMinput}/original/${country}_${year}_${fil}.txt", clear
+.         
+.         format idperson %12.0f
+. 
+.         di in r "Merging key variable is `var_merge'"
+Merging key variable is idorigperson
+.         
+.         noisily cap unab allvars: _all
+.         global allvars "`allvars'" 
+.         sort idhh idperson
+.         merge 1:1 `var_merge' using `udb'
+(variable idhh was long, now double to accommodate using data's values)
+(variable idperson was long, now double to accommodate using data's values)
+(variable idorigperson was long, now double to accommodate using data's values)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                        10,902
+        from master                     5,449  (_merge==1)
+        from using                      5,453  (_merge==2)
+
+    Matched                             5,901  (_merge==3)
+    -----------------------------------------
+. 
+.         
+.         sum idhh if _merge == 1
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+        idhh |      5,449    351361.1    206364.8       1200     719100
+.         if r(N) > 0{
+.                 di in r "wrong version"
+wrong version
+.                 if "${country}" == "be"{
+.                         keep if _merge ==3
+.                 }
+.                 else{
+.                         continue,break
+statement out of context
+r(119);
+.                 }
+r(119);
+.         }
+r(119);
+.         else if r(N) == 0{
+.                 di in r "The right UDB version for merging with inpu data is `name'"
+.                 drop if _merge ==2
+.                 drop _merge
+.         }
+.         
+.         if "${country}" == "cz"{
+.                 rename idperson idperson_1
+.                 rename idorigperson idperson 
+.                 rename idperson_1 idorigperson
+.                 format idperson %12.0f 
+.         }
+.         capture drop if _merge == 2
+.         capture drop _merge
+.         
+. capture gen dcb = 1 if pb210 == "LOC" 
+. replace dcb = 2 if pb210 == "EU" 
+. replace dcb = 3 if pb210 == "OTH" 
+. 
+. count if !(dcb >= 1 & dcb <= 3) 
+. display in y "No of observations with missing or invalid citizenship (dcz): " r(N) 
+. if r(N) > 0 noi display in r "MUST BE IMPUTED!"
+. 
+. tab dcb, m
+. 
+. * Missing values can be replaced by the citizenship of the mother
+. 
+. bysort idhh: egen temp_mode_dcb = mode(dcb), minmode
+. replace dcb = temp_mode_dcb if dcb == .
+. 
+. * Missing values are considered citizen of country of residence
+. replace dcb = 1 if dcb == .
+. 
+. if ${year} == 2019 {
+.         
+. * new country of birth
+. gen cob = pb210
+. replace cob = pt070 if pt070 != ustrupper("${country}")  
+. replace cob = ustrupper("${country}") if dcb == 1 
+. *replace dcb = 1 if dcb == .
+. replace cob =pb210  if missing(cob)
+. }
+. 
+. gen bornEU_ctz = dcz==1 & dcb ==2
+. gen bornnonEU_ctz = dcz==1 & dcb ==3
+. gen migrant_EU = dcz!=1 & dcb ==2
+. gen migrant_nonEU = dcz!=1 & dcb ==3
+. 
+. 
+. 
+. capture gen dyyrs = ${year} - rb031
+. replace dyyrs = 80 if missing(dyyrs)
+. replace dyyrs = 0 if dyyrs<0
+. }
+r(119);
+
+end of do-file
+r(119);
+
+end of do-file
+
+r(119);
+

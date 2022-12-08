@@ -1,0 +1,7 @@
+Should we include these files in version to share?
+8_labour_demand_ETR.do
+8_programs_equilibrium_ETR.do
+dis_8.do
+geocode.dta
+
+In 4_output I couldn't find the line to drop duplicated observations for unemployment (check with Edlira if this is last version)

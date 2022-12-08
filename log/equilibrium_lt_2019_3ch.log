@@ -1,0 +1,878 @@
+------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  R:\B2\01 - Households\10 - Labour supply model\02 - Working area\02 - Training\EURO
+> LAB 1.0\do\../log//equilibrium_lt_2019_3ch.log
+  log type:  text
+ opened on:   6 Dec 2022, 21:44:18
+
+. 
+. 
+. //read all programs created for the equilibrium
+. quiet do 8_programs_equilibrium.do
+
+. 
+. **********************************************************************************************
+> *****
+. *** STEP 1- RUN BASELINE MODEL to recover all scalars on demand side under the baseline
+. *** Table 1: scalar_E_base (C5), scalar_I_base (C6), scalar_U_base (C7)
+. *** Note, this step comes second to recover scalars of E, I and U under the baseline.
+. **********************************************************************************************
+> *****
+. global counter_ld=0
+
+. gen cons = 0
+
+. 
+. foreach ref in $new_reforms{ 
+  2.         use "${path_LSscen}/4_pred/${country}_${year}_${choices}ch_pred_LS.dta", clear 
+  3.         gen cons = 0
+  4.         keep if flex_hh < 4 & flex == 1
+  5.         *gen eq_dispy_p${ryear}_base = ils_dispy_p2021_base/oecd_equiv_scale  //obtain equi
+> valised dpi by merged scale 
+.         *sumdist eq_dispy_p${ryear}_base [aw= dwt], ng(3) qgp(pct)
+.         *replace pct = 2 if pct > 2 & pct < 5
+.         *replace pct = 3 if pct ==5
+.         
+.         local baseline_ls = 1
+  6.         global counter_ld= $counter_ld + 1
+  7.         mat demand_for_xls=J(5,5,.) //auxiliary matrix for excel sheet (table 8.)
+  8.         if `baseline_ls' {
+  9. 
+.                 // Tax regression and save estimation results
+.                 foreach s in m f {
+ 10.                         gen grossinc_`s' = .
+ 11.                         gen dispy_`s' = .
+ 12.                         gen earning_`s' = . 
+ 13.                         gen unearned_`s' = .
+ 14.                         replace grossinc_`s' = ils_origy_p${ryear}_base  if flex_`s' == 1
+ 15.                         replace dispy_`s' = ils_dispy_p${ryear}_base  if flex_`s' == 1
+ 16.                         replace earning_`s' = ils_earns_p${ryear}_base if flex_`s' == 1 &  
+> lhw_`s'_norand!=5 &  earning_`s' ==.
+ 17.                         replace earning_`s' = bun_p${ryear}_base if flex_`s' == 1 &  lhw_`s
+> '_norand==5 &  earning_`s' ==.
+ 18.                         replace unearned_`s' = grossinc_`s'  - earning_`s' if flex_`s' == 1
+ 19.                 }
+ 20. 
+.                 
+.                 foreach s in m f {
+ 21.                         foreach v in "grossinc" "earning" "dispy" "unearned"{
+ 22.                                 bys idhh lhw_f_norand lhw_m_norand sec_f sec_m emp_stat_f e
+> mp_stat_m: egen `v'_`s'_temp = total(`v'_`s')
+ 23.                                 replace `v'_`s' = `v'_`s'_temp
+ 24.                                 drop `v'_`s'_temp
+ 25.                         }
+ 26.                 }
+ 27. 
+.                 
+.                 gen other_disp = ils_dispy_p${ryear}_base_hh_other
+ 28.                 gen dispy_flex  = ils_dispy_p${ryear}_base_hh_flex
+ 29.                 
+.                 *replace cons = cons_p${ryear}_base
+.         
+.                 scalar ld_ela = 0
+ 30.                 mat change = (0,0)
+ 31.                 scalar s1 = 0
+ 32.                 BASELINE
+ 33.                 
+.                 scalar list demand_E_base //cell B4
+ 34.                 scalar list demand_I_base //cell B5
+ 35.                 scalar list demand_U_base // cell B6
+ 36. 
+.                 mat demand_for_xls[1,1]=demand_E_base
+ 37.                 mat demand_for_xls[2,1]=demand_I_base
+ 38.                 mat demand_for_xls[3,1]=demand_U_base
+ 39.                 
+.                 scalar demand_E_orig = demand_E_base 
+ 40.                 scalar demand_I_orig = demand_I_base
+ 41.                 scalar demand_U_orig = demand_U_base
+ 42.         
+.                 drop grossinc_* earning_*  dispy_* unearned* other_disp
+ 43. 
+.         }
+ 44.                 
+.         ////EFFECTS OF THE REFORM - WITHOUT DEMAND SIDE
+>         local baseline_ls = 0
+ 45.         if `baseline_ls' == 0 {         
+ 46.                 foreach s in m f {
+ 47.                         gen grossinc_`s' = .
+ 48.                         gen dispy_`s' = .
+ 49.                         gen earning_`s' = . 
+ 50.                         gen unearned_`s' = .
+ 51.                         replace grossinc_`s' = ils_origy_p`ref'  if flex_`s' == 1
+ 52.                         replace dispy_`s' = ils_dispy_p`ref'  if flex_`s' == 1
+ 53.                         replace earning_`s' = ils_earns_p`ref' if flex_`s' == 1 &  lhw_`s'_
+> norand!=5 &  earning_`s' ==.
+ 54.                         replace earning_`s' = bun_p`ref' if flex_`s' == 1 &  lhw_`s'_norand
+> ==5 &  earning_`s' ==.
+ 55.                         replace unearned_`s' = grossinc_`s'  - earning_`s' if flex_`s' == 1
+ 56.                 }
+ 57. 
+.                 // Tax regression and save estimation results
+.                 foreach s in m f {
+ 58.                         foreach v in "grossinc" "earning" "dispy" "unearned"{
+ 59.                                 bys idhh lhw_f_norand lhw_m_norand sec_f sec_m emp_stat_f e
+> mp_stat_m: egen `v'_`s'_temp = total(`v'_`s')
+ 60.                                 replace `v'_`s' = `v'_`s'_temp
+ 61.                                 drop `v'_`s'_temp
+ 62.                         }
+ 63.                 }
+ 64.                 
+.                 gen other_disp = ils_dispy_p`ref'_hh_other
+ 65.                 gen dispy_flex  = ils_dispy_p`ref'_hh_flex
+ 66.                 
+.                 *replace cons = cons_p`ref'
+.                 
+.                 
+.                 scalar ld_ela = ${LD_ELA}
+ 67.                 mat change = (0,0)
+ 68.                 RESULTS
+ 69. 
+.                 scalar list demand_E_new //cell C4
+ 70.                 scalar list demand_I_new //cell C5
+ 71.                 scalar list demand_U_new // cell C6
+ 72. 
+.                 mat demand_for_xls[1,2]=demand_E_new
+ 73.                 mat demand_for_xls[2,2]=demand_I_new
+ 74.                 mat demand_for_xls[3,2]=demand_U_new
+ 75. 
+.         }
+ 76. 
+.         ////EFFECTS OF THE REFORM - WITH DEMAND SIDE
+> 
+.         mat bindexk = (-0.006)
+ 77. 
+.         ///RUN AMOEBA ALGORITHM TO FIND THE NEW EQUAILIBRIUM WAGE
+>         amoeba EQUILIBRIUM bindexk yout bindex . 
+ 78. 
+.         mat change = bindex[1,1]
+ 79. 
+.         RESULTS
+ 80. 
+.         scalar list demand_E_new //cell D4
+ 81.         scalar list demand_I_new //cell D5
+ 82.         scalar list demand_U_new // cell D6
+ 83.         mat list bindex
+ 84.         scalar v = -(1-exp(-bindex[1,1]/ld_ela))*100 //cell D7
+ 85.         scalar u = -(1-exp(-bindex[1,2]/ld_ela))*100 //cell D8
+ 86. 
+.         mat demand_for_xls[1,3]=demand_E_new
+ 87.         mat demand_for_xls[2,3]=demand_I_new
+ 88.         mat demand_for_xls[3,3]=demand_U_new
+ 89.         mat demand_for_xls[4,5]=v
+ 90.         mat demand_for_xls[5,5]=u
+ 91. 
+.         quiet do 8_labour_demand_table "`ref'"
+ 92. }
+(24,812 observations deleted)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(0 real changes made)
+(20,356 real changes made)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(0 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(results clogit_couples_lt_2019 are active now)
+(42,140 real changes made)
+  __000018 = -2.0626048
+  __000019 = -1.4211407
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |     18,640    376.3072    248.8344        .01   2852.878
+      consum |     18,640    376.3072    248.8344        .01   2852.878
+(23,500 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |     18,640       .0625    .1920425   1.37e-09   .9801568
+p_p2022_base |     18,640       .0625    .2058503   1.40e-16   .9975488
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(results clogit_singm_lt_2019 are active now)
+(0 real changes made)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |      1,716    246.6994     233.271        .01   1502.638
+      consum |      1,716    246.6994     233.271        .01   1502.638
+(40,424 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |      1,716         .25    .3599392   5.23e-07   .9975818
+p_p2022_base |      1,716         .25    .3867304   2.45e-14    .999996
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(results clogit_singf_lt_2019 are active now)
+(0 real changes made)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |      3,144    233.6644    199.9847        .01   2538.724
+      consum |      3,144    233.6644    199.9847        .01   2538.724
+(38,996 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |      3,144         .25    .3621633   4.68e-09   .9982557
+p_p2022_base |      3,144         .25    .3620288   5.03e-09   .9993381
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(3,545 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000014 |   868795.3   14587.19      840195.1    897395.4
+--------------------------------------------------------------
+(3,545 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000016 |    68977.8   3162.677      62776.95    75178.65
+--------------------------------------------------------------
+(0 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000015 |          0  (omitted)
+--------------------------------------------------------------
+demand_E_base =  868795.27
+demand_E_base =  868795.27
+demand_I_base =  68977.804
+demand_U_base =          0
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(0 real changes made)
+(20,356 real changes made)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(0 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+demand_E_new
+demand_I_new
+demand_U_new
+demand_E_new =  867493.99
+demand_I_new =  70279.075
+demand_U_new =          0
+
+-------------------- Starting Amoeba --------------------
+
+symmetric __000001[1,1]:  Starting values
+          c1
+r1  -0.00600
+Starting value of EQUILIBRIUM: -1.78e+07
+...................
+    Value of EQUILIBRIUM     Simplex Size        Iterations
+    -0.00000                  1.4e-06             19
+
+symmetric bindex[1,1]:  Amoeba final values stored in bindex
+          c1
+r1  -0.00141
+
+-------------------- Ending Amoeba--------------------
+
+demand_E_new
+demand_I_new
+demand_U_new
+demand_E_new =  867570.78
+demand_I_new =  70202.285
+demand_U_new =          0
+
+symmetric bindex[1,1]
+            c1
+r1  -.00141039
+(24,812 observations deleted)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(0 real changes made)
+(20,356 real changes made)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(0 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(results clogit_couples_lt_2019 are active now)
+(42,140 real changes made)
+  __000018 = -2.0626048
+  __000019 = -1.4211407
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |     18,640    376.3072    248.8344        .01   2852.878
+      consum |     18,640    376.3072    248.8344        .01   2852.878
+(23,500 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |     18,640       .0625    .1920425   1.37e-09   .9801568
+p_p2022_base |     18,640       .0625    .2058503   1.40e-16   .9975488
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(results clogit_singm_lt_2019 are active now)
+(0 real changes made)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |      1,716    246.6994     233.271        .01   1502.638
+      consum |      1,716    246.6994     233.271        .01   1502.638
+(40,424 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |      1,716         .25    .3599392   5.23e-07   .9975818
+p_p2022_base |      1,716         .25    .3867304   2.45e-14    .999996
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(results clogit_singf_lt_2019 are active now)
+(0 real changes made)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |      3,144    233.6644    199.9847        .01   2538.724
+      consum |      3,144    233.6644    199.9847        .01   2538.724
+(38,996 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |      3,144         .25    .3621633   4.68e-09   .9982557
+p_p2022_base |      3,144         .25    .3620288   5.03e-09   .9993381
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(3,545 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000014 |   868795.3   14587.19      840195.1    897395.4
+--------------------------------------------------------------
+(3,545 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000016 |    68977.8   3162.677      62776.95    75178.65
+--------------------------------------------------------------
+(0 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000015 |          0  (omitted)
+--------------------------------------------------------------
+demand_E_base =  868795.27
+demand_E_base =  868795.27
+demand_I_base =  68977.804
+demand_U_base =          0
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(0 real changes made)
+(20,356 real changes made)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(0 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+demand_E_new
+demand_I_new
+demand_U_new
+demand_E_new =  868131.48
+demand_I_new =  69641.592
+demand_U_new =          0
+
+-------------------- Starting Amoeba --------------------
+
+symmetric __000001[1,1]:  Starting values
+          c1
+r1  -0.00600
+Starting value of EQUILIBRIUM: -2.34e+07
+...................
+    Value of EQUILIBRIUM     Simplex Size        Iterations
+    -0.00000                  1.5e-06             19
+
+symmetric bindex[1,1]:  Amoeba final values stored in bindex
+          c1
+r1  -0.00072
+
+-------------------- Ending Amoeba--------------------
+
+demand_E_new
+demand_I_new
+demand_U_new
+demand_E_new =  868168.74
+demand_I_new =  69604.329
+demand_U_new =          0
+
+symmetric bindex[1,1]
+           c1
+r1  -.0007214
+(24,812 observations deleted)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(0 real changes made)
+(20,356 real changes made)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(0 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(results clogit_couples_lt_2019 are active now)
+(42,140 real changes made)
+  __000018 = -2.0626048
+  __000019 = -1.4211407
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |     18,640    376.3072    248.8344        .01   2852.878
+      consum |     18,640    376.3072    248.8344        .01   2852.878
+(23,500 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |     18,640       .0625    .1920425   1.37e-09   .9801568
+p_p2022_base |     18,640       .0625    .2058503   1.40e-16   .9975488
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(results clogit_singm_lt_2019 are active now)
+(0 real changes made)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |      1,716    246.6994     233.271        .01   1502.638
+      consum |      1,716    246.6994     233.271        .01   1502.638
+(40,424 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |      1,716         .25    .3599392   5.23e-07   .9975818
+p_p2022_base |      1,716         .25    .3867304   2.45e-14    .999996
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(results clogit_singf_lt_2019 are active now)
+(0 real changes made)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |      3,144    233.6644    199.9847        .01   2538.724
+      consum |      3,144    233.6644    199.9847        .01   2538.724
+(38,996 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |      3,144         .25    .3621633   4.68e-09   .9982557
+p_p2022_base |      3,144         .25    .3620288   5.03e-09   .9993381
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(3,545 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000014 |   868795.3   14587.19      840195.1    897395.4
+--------------------------------------------------------------
+(3,545 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000016 |    68977.8   3162.677      62776.95    75178.65
+--------------------------------------------------------------
+(0 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000015 |          0  (omitted)
+--------------------------------------------------------------
+demand_E_base =  868795.27
+demand_E_base =  868795.27
+demand_I_base =  68977.804
+demand_U_base =          0
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(0 real changes made)
+(20,356 real changes made)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(0 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+demand_E_new
+demand_I_new
+demand_U_new
+demand_E_new =  869511.37
+demand_I_new =  68261.695
+demand_U_new =          0
+
+-------------------- Starting Amoeba --------------------
+
+symmetric __000001[1,1]:  Starting values
+          c1
+r1  -0.00600
+Starting value of EQUILIBRIUM: -3.84e+07
+..........................
+    Value of EQUILIBRIUM     Simplex Size        Iterations
+    -0.00000                  3.8e-07             26
+
+symmetric bindex[1,1]:  Amoeba final values stored in bindex
+         c1
+r1  0.00078
+
+-------------------- Ending Amoeba--------------------
+
+demand_E_new
+demand_I_new
+demand_U_new
+demand_E_new =   869474.2
+demand_I_new =  68298.866
+demand_U_new =          0
+
+symmetric bindex[1,1]
+           c1
+r1  .00078117
+(24,812 observations deleted)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(0 real changes made)
+(20,356 real changes made)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(0 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(results clogit_couples_lt_2019 are active now)
+(42,140 real changes made)
+  __000018 = -2.0626048
+  __000019 = -1.4211407
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |     18,640    376.3072    248.8344        .01   2852.878
+      consum |     18,640    376.3072    248.8344        .01   2852.878
+(23,500 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |     18,640       .0625    .1920425   1.37e-09   .9801568
+p_p2022_base |     18,640       .0625    .2058503   1.40e-16   .9975488
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(23,500 missing values generated)
+(results clogit_singm_lt_2019 are active now)
+(0 real changes made)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |      1,716    246.6994     233.271        .01   1502.638
+      consum |      1,716    246.6994     233.271        .01   1502.638
+(40,424 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |      1,716         .25    .3599392   5.23e-07   .9975818
+p_p2022_base |      1,716         .25    .3867304   2.45e-14    .999996
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(40,424 missing values generated)
+(results clogit_singf_lt_2019 are active now)
+(0 real changes made)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __000003 |      3,144    233.6644    199.9847        .01   2538.724
+      consum |      3,144    233.6644    199.9847        .01   2538.724
+(38,996 missing values generated)
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+    __00000B |      3,144         .25    .3621633   4.68e-09   .9982557
+p_p2022_base |      3,144         .25    .3620288   5.03e-09   .9993381
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(38,996 missing values generated)
+(3,545 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000014 |   868795.3   14587.19      840195.1    897395.4
+--------------------------------------------------------------
+(3,545 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000016 |    68977.8   3162.677      62776.95    75178.65
+--------------------------------------------------------------
+(0 real changes made)
+
+Total estimation                         Number of obs = 3,545
+
+--------------------------------------------------------------
+             |      Total   Std. err.     [95% conf. interval]
+-------------+------------------------------------------------
+    __000015 |          0  (omitted)
+--------------------------------------------------------------
+demand_E_base =  868795.27
+demand_E_base =  868795.27
+demand_I_base =  68977.804
+demand_U_base =          0
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(0 real changes made)
+(20,356 real changes made)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(42,140 missing values generated)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(0 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(21,784 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+(20,356 real changes made)
+demand_E_new
+demand_I_new
+demand_U_new
+demand_E_new =  868681.73
+demand_I_new =   69091.34
+demand_U_new =          0
+
+-------------------- Starting Amoeba --------------------
+
+symmetric __000001[1,1]:  Starting values
+          c1
+r1  -0.00600
+Starting value of EQUILIBRIUM: -2.91e+07
+......................
+    Value of EQUILIBRIUM     Simplex Size        Iterations
+    -0.00000                  6.0e-09             22
+
+symmetric bindex[1,1]:  Amoeba final values stored in bindex
+          c1
+r1  -0.00012
+
+-------------------- Ending Amoeba--------------------
+
+demand_E_new
+demand_I_new
+demand_U_new
+demand_E_new =  868688.09
+demand_I_new =  69084.977
+demand_U_new =          0
+
+symmetric bindex[1,1]
+            c1
+r1  -.00012337
+
+. 
+. //Move Labour demand results to corresponding folder
+. cap copy "5-Equilibrium.xlsx" "${path_results2share}/${country}_${year}_${choices}ch/5-Equilib
+> rium.xlsx", replace
+
+. rm "5-Equilibrium.xlsx"
+
+. cap log close

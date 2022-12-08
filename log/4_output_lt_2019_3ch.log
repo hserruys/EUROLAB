@@ -1,0 +1,566 @@
+------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  R:\B2\01 - Households\10 - Labour supply model\02 - Working area\02 - Training\EURO
+> LAB 1.0\do\../log//4_output_lt_2019_3ch.log
+  log type:  text
+ opened on:   6 Dec 2022, 21:42:48
+
+. use "${path_LSscen}/2_postEM_appended/${country}_${year}_${choices}ch.dta", clear
+
+. 
+. keep idhh idper flex* dgn* dwt hhsize numch* dag migrant mortgage lhw_f lhw_m lhw_f_norand lhw
+> _m_norand sec_f sec_m emp_stat_f emp_stat_m les ils_* lhw ed_* lhw_choice hhtype age* bun* *_g
+>  employee selfemployed hourly_wage  hourly_MW oecd_equiv_scale 
+
+. 
+. 
+. drop if (lhw_m_norand == 5 & emp_stat_m != 0) & flex_m ==1
+(0 observations deleted)
+
+. 
+. 
+. if "$country" == "it" {
+.         global keepvars="ils_dispy ils_origy ils_origrepy ils_earns ils_sicdy ils_sicee ils_si
+> cse ils_sicer ils_sicot ils_ben ils_tax bunct02_s"        
+. }
+
+. if "$country" == "cy" {
+.         global keepvars="ils_dispy ils_origy ils_origrepy ils_earns ils_sicdy ils_sicee ils_si
+> cse ils_sicer ils_sicot ils_ben ils_tax bunct_s"  
+. }
+
+. else{
+.         global keepvars="ils_dispy ils_origy ils_origrepy ils_earns ils_sicee ils_sicdy ils_si
+> cse ils_sicer ils_sicot ils_ben ils_tax bun*_s"
+. }   
+
+. 
+. format idperson %12.0f 
+
+. 
+. set seed 670334520      
+
+. 
+. foreach ref in $new_reforms {
+  2. 
+.      if strpos("$reforms", "new") == 0{
+  3.                 di in r "there are no reforms" 
+  4.          }   
+  5.      
+.         if strpos("$reforms", "new") != 0 {
+  6.                 di in r "there are reforms"
+  7.         
+.                 foreach var in $keepvars{
+  8.                         rename `var'_p`ref'_new `var'_p`ref'    
+  9.                 }
+ 10.                                         
+.                                          
+.                 global reform_pred ""
+ 11.                 
+.                 foreach initial_ref in $reforms{
+ 12.                 
+.                         if "`initial_ref'" == "base"{
+ 13.                                 global reform_pred "p${ryear}_`initial_ref'"
+ 14.                                 *if "$country" == "uk" global ref_index = "p${year}_`initia
+> l_ref' p${ryear}_`initial_ref'"
+.                                  global ref_index = "p${pyear}_`initial_ref' p${ryear}_`initia
+> l_ref'"  
+ 15.                                         
+.                         }
+ 16.                         else if "`initial_ref'" == "new"  {
+ 17.                                  foreach new_ref in $new_reforms{
+ 18.                                         global reform_pred "${reform_pred} p`new_ref'"
+ 19.                                         global ref_index = "${ref_index} p`new_ref'"
+ 20.                                 }
+ 21.                         }
+ 22.                         else {
+ 23.                                 *if "$country" == "uk"   global ref_index = "${ref_index} p
+> ${year}_`initial_ref'" 
+.                                 global ref_index = "${ref_index} p${pyear}_`initial_ref'"  
+ 24.                         }
+ 25.                         display in r "reform_pred: ${reform_pred}"
+ 26.                         display in r "ref_index: ${ref_index}"
+ 27.                 }
+ 28.         }
+ 29. }
+there are reforms
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base p2018_m
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base p2018_m p2018_f
+reform_pred: p2022_base p2022_ba p2022_bsa p2022_tin p2022_cb
+ref_index: p2018_base p2022_base p2018_m p2018_f p2022_ba p2022_bsa p2022_tin p2022_cb
+there are reforms
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base p2018_m
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base p2018_m p2018_f
+reform_pred: p2022_base p2022_ba p2022_bsa p2022_tin p2022_cb
+ref_index: p2018_base p2022_base p2018_m p2018_f p2022_ba p2022_bsa p2022_tin p2022_cb
+there are reforms
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base p2018_m
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base p2018_m p2018_f
+reform_pred: p2022_base p2022_ba p2022_bsa p2022_tin p2022_cb
+ref_index: p2018_base p2022_base p2018_m p2018_f p2022_ba p2022_bsa p2022_tin p2022_cb
+there are reforms
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base p2018_m
+reform_pred: p2022_base
+ref_index: p2018_base p2022_base p2018_m p2018_f
+reform_pred: p2022_base p2022_ba p2022_bsa p2022_tin p2022_cb
+ref_index: p2018_base p2022_base p2018_m p2018_f p2022_ba p2022_bsa p2022_tin p2022_cb
+
+. 
+. 
+. foreach ref in $ref_index {
+  2.         gen ils_sic_`ref' = 0
+  3.         foreach var in "ils_sicee" "ils_sicse" "ils_sicer" "ils_sicot"{
+  4.                 quiet replace ils_sic_`ref' = ils_sic_`ref' + `var'_`ref'
+  5.                 drop `var'_`ref'
+  6.         }
+  7. }
+
+. 
+. //RENAMING 
+. foreach ref in $ref_index {
+  2.         quiet rename bun*_`ref' bun_`ref'
+  3. }
+
+. 
+.                 /*
+> if $UNEMPLOYMENT_CHOICE == 1{
+>         foreach var of varlist ils_dispy*{
+>                 quiet replace `var' = `var' - bun_all + bun_all/(65-dag) if lhw ==0  
+>         }
+> }*/
+. 
+. 
+. 
+. // Aggregate to HH income
+. foreach ref in $ref_index {
+  2. foreach var in ils_dispy ils_origy ils_earns ils_tax ils_ben bun ils_sic {
+  3. 
+.         bys idhh lhw_f_norand lhw_m_norand sec_f sec_m emp_stat_f emp_stat_m: egen `var'_`ref'
+> _hh_flex = total(`var'_`ref') if flex==1
+  4.         bys idhh lhw_f_norand lhw_m_norand sec_f sec_m emp_stat_f emp_stat_m: egen `var'_`r
+> ef'_hh = total(`var'_`ref') 
+  5.         gen `var'_`ref'_hh_other = `var'_`ref'_hh - `var'_`ref'_hh_flex
+  6. 
+. }
+  7. }
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+(64,153 missing values generated)
+
+. 
+. 
+. *drop if flex==0
+. *recode lhw_m lhw_f (. = 0)
+. 
+. gen flex_hh_f=(inlist(flex_hh, 2, 4, 6))
+
+. gen flex_hh_m=(inlist(flex_hh, 3, 5, 7))
+
+. 
+. 
+. *drop if flex == 0 |flex==.
+. 
+. // drop redundant categories for singles
+. // this code is not necessary if counterfactual datasets dont exist for singles
+. foreach g in "m" "f" {
+  2.     bysort idperson lhw_`g'_norand sec_`g' emp_stat_`g' :gen index_single_`g' = _n
+  3.         drop if index_single_`g' > 1 & flex_hh_`g' ==1 
+  4. } 
+(21,768 observations deleted)
+(31,704 observations deleted)
+
+. 
+. 
+. drop lhw_f lhw_m
+
+. 
+. 
+. foreach x of varlist lhw ed_* lhw_choice age* {   
+  2.         foreach g in "m" "f" {
+  3.                 gen `x'_`g' = 0
+  4.                 replace `x'_`g' = `x' if flex_`g' == 1
+  5.                 bysort idhh lhw_f_norand lhw_m_norand sec_f sec_m emp_stat_f emp_stat_m: eg
+> en `x'_`g'_min = total(`x'_`g')
+  6.                 replace `x'_`g' = `x'_`g'_min
+  7.                 drop `x'_`g'_min
+  8.         }
+  9. }
+(16,227 real changes made)
+(29,967 real changes made)
+(17,487 real changes made)
+(30,270 real changes made)
+(1,012 real changes made)
+(1,851 real changes made)
+(592 real changes made)
+(1,261 real changes made)
+(13,048 real changes made)
+(23,354 real changes made)
+(11,892 real changes made)
+(19,047 real changes made)
+(7,576 real changes made)
+(14,766 real changes made)
+(10,832 real changes made)
+(20,072 real changes made)
+(19,548 real changes made)
+(36,663 real changes made)
+(20,708 real changes made)
+(35,423 real changes made)
+(21,564 real changes made, 1,716 to missing)
+(41,319 real changes made)
+(22,916 real changes made, 3,144 to missing)
+(42,593 real changes made)
+(21,636 real changes made)
+(39,971 real changes made)
+(23,316 real changes made)
+(40,380 real changes made)
+(21,636 real changes made)
+(39,971 real changes made)
+(23,316 real changes made)
+(40,380 real changes made)
+(21,636 real changes made)
+(39,971 real changes made)
+(23,316 real changes made)
+(40,380 real changes made)
+
+. 
+. 
+.                 
+. // HH types
+. // flex_f: flexible women, 
+. // flex_m: flexible men, 
+. // flex_hh:     1 = LS couple,  2 = LS single woman, 3 = LS single man
+. //                              4 =                 5 = 
+. //                              6 =                 7 = 
+. // 
+. 
+. 
+. *save "${path_LSscen}/2_postEM_appended/${country}_${year}_${choices}ch_full.dta", replace
+. 
+. /*
+> // this part should be programmed in the prepare_data do-file
+> preserve
+>     // Export not-flexible to append back later to make representative aggregation 
+>     keep if flex_hh == 0
+>     keep if (lhw_choice_f == lhw_f) & (lhw_choice_m == lhw_m)
+> 
+> save "${path_LSscen}/3_LS/${country}_${year}_${choices}ch_notflex.dta", replace
+> restore 
+> */
+. 
+. 
+. tab flex_hh
+
+    flex_hh |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      3,305        4.20        4.20
+          1 |     57,520       73.14       77.34
+          2 |      6,252        7.95       85.29
+          3 |      3,180        4.04       89.33
+          4 |      4,316        5.49       94.82
+          5 |      4,076        5.18      100.00
+------------+-----------------------------------
+      Total |     78,649      100.00
+
+. 
+. *generate semiflex = (inlist(flex_hh, 4, 5))
+. //identification of the choice made
+. 
+. 
+. //generation of gender specific vars of observed choice
+. foreach g in "m" "f" {
+  2.         gen choice_hour_`g' = 0
+  3.         gen emp_status_`g' = 0
+  4.         gen sector_`g' = 0
+  5.         replace choice_hour_`g' = choice_g if flex_`g' == 1 
+  6.         replace emp_status_`g' = emp_status_g if flex_`g' == 1 
+  7.         replace sector_`g' = sec_g if flex_`g' == 1 
+  8. }
+(19,548 real changes made)
+(19,548 real changes made)
+(19,548 real changes made)
+(20,708 real changes made)
+(20,708 real changes made)
+(20,708 real changes made)
+
+. 
+. 
+. foreach x in "choice_hour" "sector" "emp_status"{    
+  2.         foreach g in "m" "f" {
+  3.                 bysort idhh lhw_f_norand lhw_m_norand sec_f sec_m emp_stat_f emp_stat_m: eg
+> en `x'_`g'`g' = max(`x'_`g')
+  4.                 replace `x'_`g' = `x'_`g'`g' if flex==1
+  5.         } 
+  6. }
+(17,152 real changes made)
+(16,576 real changes made)
+(17,152 real changes made)
+(16,576 real changes made)
+(17,152 real changes made)
+(16,576 real changes made)
+
+. 
+. foreach g in "m" "f" {
+  2.         gen ls_`g' = 0
+  3.         replace ls_`g' = 1 if choice_hour_`g' == lhw_`g'_norand & sec_`g' == sector_`g' & e
+> mp_stat_`g' == emp_status_`g' & flex ==1
+  4. }
+(11,246 real changes made)
+(11,251 real changes made)
+
+. 
+. gen ls = 0
+
+. replace ls =1 if ls_m ==1 & flex_hh_m == 1
+(749 real changes made)
+
+. replace ls =1 if ls_f ==1 & flex_hh_f == 1
+(1,169 real changes made)
+
+. replace ls = 1 if ls_m + ls_f ==2  & flex_hh ==1
+(2,330 real changes made)
+
+. 
+. sort idhh idperson ls_m ls_f
+
+. bysort idperson: egen check_ls=  total(ls)
+
+. 
+. assert check_ls==1 if flex ==1 & flex_hh !=0
+
+. 
+. bys idper lhw_m_norand lhw_f_norand: gen ls_x = sum(ls)
+
+. 
+. //samesex couples
+. bys idhh: egen checkchoi = total(choice_g) 
+
+. 
+. *drop if checkchoi == 0 & flex_hh ==1 /*to exclude samesex couples*/
+. 
+. 
+. quietly compress
+
+. cap mkdir $path_LSscen/3_LS
+
+. 
+. tempname totaltime
+
+. scalar `totaltime' = 80
+
+. 
+. 
+. // Generate Leisure time variable and hour dummies
+. foreach s in "m" "f" {
+  2.         *replace lhw_`s' = 0 if lhw_`s'_norand == 5
+.     gen leis_`s' = `totaltime' - lhw_`s'
+  3.         gen d_p_`s' = (inrange(lhw_`s', 10, 20))
+  4.         gen d_f_`s' = (inrange(lhw_`s', 25, 39))
+  5.     gen d_o_`s' = (inrange(lhw_`s', 40, 56))
+  6.     gen d_in_`s'   = (lhw_`s' >=  5)
+  7.         gen d_un_`s'   = (lhw_`s' >  0 & lhw_`s' <5)
+  8.         gen d_out_`s'   = (lhw_`s' ==  0)
+  9. }
+
+. 
+. 
+. // Generate sectoral dummies
+. 
+. foreach g in "m" "f" {
+  2.         forvalues sec = 1/${NumberOfSectors} {
+  3.                 di "`sec'"
+  4.                 gen sec_`sec'_`g' = (sec_`g' == `sec')
+  5.         }
+  6. }
+1
+1
+
+. 
+. // Generate empl status dummies
+. foreach g in "m" "f" {
+  2.         forvalues emp= 1/${EmplStatus}{
+  3.                 gen emp_`emp'_`g' = emp_stat_`g' == `emp'
+  4.         }
+  5. }
+
+. 
+. // Generate interaction between hour dummies and sectors
+. foreach g in "m" "f" {
+  2.         forvalues sec= 1/${NumberOfSectors}{
+  3.                 forvalues emp= 1/${EmplStatus}{
+  4.                         gen dummy_`sec'_`emp'_`g' = sec_`sec'_`g' * emp_`emp'_`g'
+  5.                         gen d_p_`sec'_`emp'_`g' = d_p_`g' * sec_`sec'_`g' * emp_`emp'_`g'
+  6.                         gen d_f_`sec'_`emp'_`g' = d_f_`g' * sec_`sec'_`g' * emp_`emp'_`g'
+  7.                         gen d_o_`sec'_`emp'_`g' = d_o_`g' * sec_`sec'_`g' * emp_`emp'_`g'
+  8.                         gen d_in_`sec'_`emp'_`g' = d_in_`g' * sec_`sec'_`g' * emp_`emp'_`g'
+  9.                 }
+ 10.         }
+ 11. }
+
+. 
+. *gen mother = idmother > 0
+. *gen father = idfather >0 
+. 
+. 
+. foreach g in "m" "f" {  
+  2.         foreach name in "numch" "numch3" "numch36" "numch6p" "migrant" "mortgage"{
+  3.                 generate leis_`name'_`g' = leis_`g'*`name'
+  4.         }
+  5. } 
+
+. 
+. foreach g in "m" "f" {                          
+  2.         foreach name in "leis" "age" "age2" "ed_high" "ed_middle" {
+  3.                 generate leis_`name'_`g' = leis_`g'*`name'_`g'
+  4.     }
+  5. } 
+
+. 
+. 
+. gen leis_m_f = leis_m * leis_f
+
+. 
+.   
+. gen consum_${year} = 0
+
+. 
+. 
+. 
+. sort idperson
+
+. 
+. *save "C:\Users\NARAZANI\Desktop\data_adjusted.dta",replace
+. save "${path_LSscen}/3_LS/${country}_${year}_${choices}ch_LS.dta", replace
+file ../data//LSscenarios//3_LS/lt_2019_3ch_LS.dta saved
+
+. 
+. log close
+      name:  <unnamed>
+       log:  R:\B2\01 - Households\10 - Labour supply model\02 - Working area\02 - Training\EURO
+> LAB 1.0\do\../log//4_output_lt_2019_3ch.log
+  log type:  text
+ closed on:   6 Dec 2022, 21:43:02
+------------------------------------------------------------------------------------------------
