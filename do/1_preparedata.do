@@ -38,9 +38,17 @@ if $INPUT_DATA == 1{
 *********************************************************************************
 if $INPUT_DATA == 0{
 
-	local name = "2021-11" 
-				
-	use "${path_SILC_data}\\${country}\\${year}\\${country}-SILC-${year}-version_`name'.dta",clear
+	local name = "2022-03" 
+	mata:
+	function get_latest_version(string scalar country_code,string scalar path) 
+	{
+		content_dir = sort(dir(path,"files",country_code + "-SILC*.dta"),1)
+		st_local("udb_file_path",path + content_dir[length(content_dir)])
+	}
+
+	get_latest_version("${COUNTRY}","${path_SILC_data}\\${country}\\${year}\\")
+	end			
+	use "`udb_file_path'",clear
 
 		if "${country}" == "at" {
 
@@ -63,21 +71,32 @@ if $INPUT_DATA == 0{
 				
 			}
 			else if "${country}" == "sk" {
-			    
-				gen double r_rb030 = idperson
-				drop rb030
-				noi merge 1:1 r_rb030 using "${path_EMinput}/C19_R_HIDMAP_JRC_SK"
-				replace idperson = rb030
-				format idperson %12.0f
-				rename r_rb030 idorigperson 
-				local var_merge "idperson"
+			    if "$year" == "2019" {
+					gen double r_rb030 = idperson
+					drop rb030
+					noi merge 1:1 r_rb030 using "${path_EMinput}/C19_R_HIDMAP_JRC_SK"
+					replace idperson = rb030
+					format idperson %12.0f
+					rename r_rb030 idorigperson 
+					local var_merge "idperson"
+				}
+				else if "$year" == "2020" {
+					rename idperson idperson_udb
+					noi merge 1:1 idperson_udb using "$idmap_sk"
+					drop if _merge==1
+					drop _merge
+					local var_merge = "idperson"
+					format idperson %12.0f
+					drop idperson_udb
+				}
+				
 				
 			}
 			else if "${country}" == "it" {
 				
 				di in r "here i am"
 			    local name = "2020-11"
-		use "${path_SILC_data}\\${country}\\${year}\\${country}-SILC-${year}-version_`name'.dta",clear
+				use "`udb_file_path'",clear
 
 				local var_merge "idperson"
 				
@@ -121,7 +140,7 @@ if $INPUT_DATA == 0{
 		}
 	}
 	else if r(N) == 0{
-		di in r "The right UDB version for merging with inpu data is `name'"
+		di in r "The right UDB version used: `udb_file_path'"
 		drop if _merge ==2
 		drop _merge
 	}

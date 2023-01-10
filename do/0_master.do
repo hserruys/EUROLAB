@@ -42,6 +42,9 @@ global year    = substr("${filenames}",4,4) //survey year
 global pyear = $year - 1		//income year
 global filenames_count  : list sizeof global(filenames)
 
+global idmap_sk  "\\s-jrcsvqfs200p.net1.cec.eu.int\iptsmods\B2\01 - Households\01 - European Semester\09 - 2022 - 2023\Country requests\SK\02 - Working area\01 - Data\IDmaps_2020_SK.dta"
+
+
 if ${PREPAREDATA} == 1 global run_baseline_income_year = 1
 else global run_baseline_income_year = 0
 
